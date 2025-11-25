@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PWA URL 生成器</title>
+  <link href="css/bootstrap.min.css" rel="stylesheet">
+  <script src="js/bootstrap.bundle.min.js"></script>
+  <link href="css/bootstrap-icons.css" rel="stylesheet">
+  <style>
+    body { font-family: sans-serif; margin: 2em; }
+    .modal-backdrop { z-index: 1040 !important; }
+    .modal { z-index: 1050 !important; }
+  </style>
+</head>
+<body class="bg-light">
+  <div class="container py-5">
+    <div class="row justify-content-center">
+      <div class="col-md-6 text-center">
+        <h1 class="mb-4">PWA URL 生成器</h1>
+        <button id="generate-token-btn" class="btn btn-lg btn-success text-white d-inline-flex align-items-center">
+          <i class="bi bi-link-45deg me-2"></i>生成 PWA URL
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast 通知 -->
+  <div id="copy-toast" class="position-fixed bottom-0 end-0 p-3" style="z-index: 2000; display:none;">
+    <div class="toast align-items-center text-bg-success border-0 show" role="alert">
+      <div class="d-flex">
+        <div class="toast-body">已複製到剪貼簿</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Token generation function
+    document.getElementById('generate-token-btn').onclick = function() {
+      if (!confirm('確定要生成新的 Token 嗎？')) return;
+      
+      fetch('/api/generateToken', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          showTokenModal(data.token, data.id, data.pwaUrls);
+        } else {
+          alert('Token 生成失敗：' + (data.error || '未知錯誤'));
+        }
+      })
+      .catch(err => {
+        alert('Token 生成失敗：' + err.message);
+      });
+    };
+
+    // Show token modal with PWA URLs
+    function showTokenModal(token, id, pwaUrls) {
+      let urlsHtml = '';
+      if (pwaUrls && pwaUrls.length > 0) {
+        urlsHtml = '<h6 class="mt-3 mb-2">PWA URLs with Token:</h6><div class="list-group">';
+        pwaUrls.forEach(pwaUrl => {
+          const fullUrl = pwaUrl.url + '?token=' + token;
+          urlsHtml += `
+            <div class="list-group-item d-flex justify-content-between align-items-center">
+              <span class="text-truncate me-2" style="max-width: 400px;" title="${fullUrl}">${fullUrl}</span>
+              <button class="btn btn-outline-primary btn-sm" onclick="copyToClipboard('${fullUrl}')">
+                <i class="bi bi-files"></i> Copy
+              </button>
+            </div>
+          `;
+        });
+        urlsHtml += '</div>';
+      } else {
+        urlsHtml = '<p class="mt-3 text-muted">沒有找到 PWA URLs</p>';
+      }
+
+      const modalHtml = `
+        <div class="modal fade" id="tokenModal" tabindex="-1" aria-hidden="true">
+          <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title">Token 生成成功</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+              </div>
+              <div class="modal-body">
+                <div class="alert alert-success">
+                  <strong>Token:</strong> ${token}<br>
+                  <strong>資料庫 ID:</strong> ${id}
+                </div>
+                <div class="alert alert-warning">
+                  <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                  <strong>请注意：</strong>此链接请使用邮箱进行推送，不要透过微信传送，以免导致被封锁而无法打开。
+                </div>
+                ${urlsHtml}
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">關閉</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      // Remove existing modal if any
+      const existingModal = document.getElementById('tokenModal');
+      if (existingModal) {
+        existingModal.remove();
+      }
+
+      // Add new modal to body
+      document.body.insertAdjacentHTML('beforeend', modalHtml);
+      
+      // Show modal
+      const tokenModal = new bootstrap.Modal(document.getElementById('tokenModal'));
+      tokenModal.show();
+
+      // Remove modal from DOM when hidden
+      document.getElementById('tokenModal').addEventListener('hidden.bs.modal', function() {
+        this.remove();
+      });
+    }
+
+    // Copy to clipboard function
+    function copyToClipboard(text) {
+      navigator.clipboard.writeText(text).then(() => {
+        showCopyToast();
+      }).catch(err => {
+        console.error('Failed to copy: ', err);
+        // Fallback for older browsers
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        showCopyToast();
+      });
+    }
+
+    // Show copy toast notification
+    function showCopyToast() {
+      const toast = document.getElementById('copy-toast');
+      toast.style.display = 'block';
+      setTimeout(() => { toast.style.display = 'none'; }, 2000);
+    }
+  </script>
+</body>
+</html>
+
