@@ -62,7 +62,7 @@ app.post('/api/generateToken', async (req, res) => {
     
     // 取得所有 PWA URLs
     const [pwaUrls] = await pool.query(
-      'SELECT * FROM urls WHERE type = ?',
+      'SELECT * FROM urls WHERE type = ? AND status = "enable"',
       ['pwa']
     );
     
