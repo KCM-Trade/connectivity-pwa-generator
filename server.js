@@ -9,20 +9,17 @@ const port = process.env.PORT;
 
 app.use(cors());
 app.use(express.json());
-app.use(express.static('public'));
 
-// 允许被iframe嵌入
+// 允许被iframe嵌入 - 必须在 express.static 之前
 app.use((req, res, next) => {
-  // 移除X-Frame-Options限制，允许所有域名嵌入
+  // 使用 Content-Security-Policy 的 frame-ancestors 允许所有域名嵌入
+  res.setHeader('Content-Security-Policy', "frame-ancestors 'self' *");
+  // 不设置 X-Frame-Options，让 CSP 生效
   res.removeHeader('X-Frame-Options');
-  // 或者如果你想限制特定域名，可以使用：
-  // res.setHeader('X-Frame-Options', 'ALLOW-FROM https://your-domain.com');
-  
-  // 设置Content-Security-Policy允许iframe嵌入
-  res.setHeader('Content-Security-Policy', "frame-ancestors *");
-  
   next();
 });
+
+app.use(express.static('public'));
 
 const pool = mysql.createPool({
   host: process.env.DB_HOST,
