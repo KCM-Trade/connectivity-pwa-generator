@@ -348,16 +348,22 @@
 
     // Show token modal with PWA URLs
     function showTokenModal(token, id, pwaUrls) {
+      console.log('[Modal] 开始显示 Token Modal');
+      console.log('[Modal] Token:', token);
+      console.log('[Modal] ID:', id);
+      console.log('[Modal] PWA URLs 数量:', pwaUrls ? pwaUrls.length : 0);
       let urlsHtml = '';
       if (pwaUrls && pwaUrls.length > 0) {
         urlsHtml = '<h6 class="mb-3" style="font-weight: 600; color: #1a1a2e;">PWA 链接：</h6>';
         pwaUrls.forEach((pwaUrl, index) => {
           const fullUrl = pwaUrl.url + '?token=' + token;
-          // 使用 data 属性存储 URL，避免特殊字符问题
+          // 转义单引号和双引号，以便在 onclick 中安全使用
+          const escapedUrl = fullUrl.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+          console.log('[Modal] 生成 URL 项:', { index, url: fullUrl, escapedUrl });
           urlsHtml += `
             <div class="url-item">
               <span class="url-text">${fullUrl}</span>
-              <button class="copy-btn" data-copy-url="${fullUrl.replace(/"/g, '&quot;')}" data-index="${index}">
+              <button class="copy-btn" onclick="console.log('[Button] 复制按钮被点击'); copyToClipboard('${escapedUrl}')">
                 <i class="bi bi-files"></i> 複製
               </button>
             </div>
@@ -399,103 +405,145 @@
       // Remove existing modal if any
       const existingModal = document.getElementById('tokenModal');
       if (existingModal) {
+        console.log('[Modal] 移除已存在的 modal');
         existingModal.remove();
       }
 
       // Add new modal to body
+      console.log('[Modal] 添加 modal HTML 到 DOM');
       document.body.insertAdjacentHTML('beforeend', modalHtml);
       
-      // 绑定复制按钮事件（使用事件委托，确保在 iframe 中也能工作）
-      const modalElement = document.getElementById('tokenModal');
-      modalElement.addEventListener('click', function(e) {
-        if (e.target.closest('.copy-btn')) {
-          const btn = e.target.closest('.copy-btn');
-          const urlToCopy = btn.getAttribute('data-copy-url');
-          if (urlToCopy) {
-            copyToClipboard(urlToCopy);
-          }
-        }
-      });
-      
       // Show modal
+      const modalElement = document.getElementById('tokenModal');
+      if (!modalElement) {
+        console.error('[Modal] ❌ 找不到 modal 元素');
+        return;
+      }
+      console.log('[Modal] 创建 Bootstrap Modal 实例');
       const tokenModal = new bootstrap.Modal(modalElement);
+      console.log('[Modal] 显示 modal');
       tokenModal.show();
 
       // Remove modal from DOM when hidden
       modalElement.addEventListener('hidden.bs.modal', function() {
+        console.log('[Modal] Modal 已隐藏，从 DOM 移除');
         this.remove();
       });
     }
 
-    // Copy to clipboard function - 优化 iframe 和非 iframe 支持
+    // Copy to clipboard function - 恢复简单可靠的实现
     function copyToClipboard(text) {
-      // 方法1: 优先尝试 Clipboard API（现代浏览器，包括 iframe）
-      if (navigator.clipboard && navigator.clipboard.writeText && window.isSecureContext) {
+      console.log('[Copy] 开始复制功能');
+      console.log('[Copy] 要复制的文本:', text);
+      console.log('[Copy] 是否在 iframe 中:', window.self !== window.top);
+      console.log('[Copy] 是否安全上下文:', window.isSecureContext);
+      console.log('[Copy] navigator.clipboard 可用:', !!navigator.clipboard);
+      console.log('[Copy] navigator.clipboard.writeText 可用:', !!(navigator.clipboard && navigator.clipboard.writeText));
+      
+      // 尝试使用 Clipboard API
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        console.log('[Copy] 尝试使用 Clipboard API...');
         navigator.clipboard.writeText(text).then(() => {
+          console.log('[Copy] ✅ Clipboard API 复制成功');
           showCopyToast();
         }).catch(err => {
-          console.error('Clipboard API failed: ', err);
-          // 如果 Clipboard API 失败，使用 execCommand fallback
-          execCommandCopy(text);
+          console.error('[Copy] ❌ Clipboard API 失败:', err);
+          console.log('[Copy] 错误详情:', {
+            name: err.name,
+            message: err.message,
+            stack: err.stack
+          });
+          console.log('[Copy] 尝试使用 execCommand fallback...');
+          // Fallback for older browsers or iframe contexts
+          execCommandFallback(text);
         });
       } else {
-        // 方法2: 使用 execCommand（兼容性更好，在 iframe 中也更可靠）
-        execCommandCopy(text);
+        console.log('[Copy] Clipboard API 不可用，直接使用 execCommand fallback');
+        execCommandFallback(text);
       }
     }
 
-    // 使用 execCommand 复制（在 iframe 中更可靠）
-    function execCommandCopy(text) {
-      const textArea = document.createElement('textarea');
-      textArea.value = text;
-      // 设置样式使其不可见但可访问
-      textArea.style.position = 'fixed';
-      textArea.style.top = '0';
-      textArea.style.left = '0';
-      textArea.style.width = '2em';
-      textArea.style.height = '2em';
-      textArea.style.padding = '0';
-      textArea.style.border = 'none';
-      textArea.style.outline = 'none';
-      textArea.style.boxShadow = 'none';
-      textArea.style.background = 'transparent';
-      textArea.style.opacity = '0';
-      textArea.style.zIndex = '-9999';
-      
-      document.body.appendChild(textArea);
-      
-      // 确保 textArea 获得焦点
-      textArea.focus();
-      textArea.select();
-      
-      // 移动设备支持
-      if (textArea.setSelectionRange) {
-        textArea.setSelectionRange(0, text.length);
-      }
-      
+    // execCommand fallback 函数
+    function execCommandFallback(text) {
+      console.log('[Copy] execCommand fallback 开始执行');
       try {
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        console.log('[Copy] 创建 textarea 元素');
+        
+        // 设置样式使其不可见但可访问
+        textArea.style.position = 'fixed';
+        textArea.style.top = '0';
+        textArea.style.left = '0';
+        textArea.style.width = '2em';
+        textArea.style.height = '2em';
+        textArea.style.padding = '0';
+        textArea.style.border = 'none';
+        textArea.style.outline = 'none';
+        textArea.style.boxShadow = 'none';
+        textArea.style.background = 'transparent';
+        textArea.style.opacity = '0';
+        textArea.style.zIndex = '-9999';
+        
+        document.body.appendChild(textArea);
+        console.log('[Copy] textarea 已添加到 DOM');
+        
+        textArea.focus();
+        textArea.select();
+        console.log('[Copy] textarea 已获得焦点并选中文本');
+        
+        // 移动设备支持
+        if (textArea.setSelectionRange) {
+          textArea.setSelectionRange(0, text.length);
+          console.log('[Copy] 设置选择范围:', '0-' + text.length);
+        }
+        
         const successful = document.execCommand('copy');
+        console.log('[Copy] execCommand("copy") 执行结果:', successful);
+        
         document.body.removeChild(textArea);
+        console.log('[Copy] textarea 已从 DOM 移除');
         
         if (successful) {
+          console.log('[Copy] ✅ execCommand 复制成功');
           showCopyToast();
         } else {
-          // 如果 execCommand 返回 false，尝试提示用户
+          console.error('[Copy] ❌ execCommand 返回 false');
           alert('無法自動複製，請手動複製以下內容：\n\n' + text);
         }
       } catch (err) {
-        console.error('execCommand failed: ', err);
-        document.body.removeChild(textArea);
-        // 最后的 fallback
+        console.error('[Copy] ❌ execCommand 执行异常:', err);
+        console.error('[Copy] 异常详情:', {
+          name: err.name,
+          message: err.message,
+          stack: err.stack
+        });
+        // 确保移除 textarea
+        const textAreas = document.querySelectorAll('textarea[style*="opacity: 0"]');
+        textAreas.forEach(ta => {
+          if (ta.parentNode) {
+            ta.parentNode.removeChild(ta);
+            console.log('[Copy] 清理残留的 textarea');
+          }
+        });
         alert('無法自動複製，請手動複製以下內容：\n\n' + text);
       }
     }
 
     // Show copy toast notification
     function showCopyToast() {
+      console.log('[Toast] 显示复制成功提示');
       const toast = document.getElementById('copy-toast');
-      toast.style.display = 'block';
-      setTimeout(() => { toast.style.display = 'none'; }, 2000);
+      if (toast) {
+        toast.style.display = 'block';
+        console.log('[Toast] Toast 已显示');
+        setTimeout(() => { 
+          toast.style.display = 'none';
+          console.log('[Toast] Toast 已隐藏');
+        }, 2000);
+      } else {
+        console.error('[Toast] ❌ 找不到 toast 元素');
+      }
     }
   </script>
 </body>
