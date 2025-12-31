@@ -431,16 +431,25 @@
       });
     }
 
-    // Copy to clipboard function - 恢复简单可靠的实现
+    // Copy to clipboard function - 优化 iframe 支持
     function copyToClipboard(text) {
+      const isInIframe = window.self !== window.top;
+      
       console.log('[Copy] 开始复制功能');
       console.log('[Copy] 要复制的文本:', text);
-      console.log('[Copy] 是否在 iframe 中:', window.self !== window.top);
+      console.log('[Copy] 是否在 iframe 中:', isInIframe);
       console.log('[Copy] 是否安全上下文:', window.isSecureContext);
       console.log('[Copy] navigator.clipboard 可用:', !!navigator.clipboard);
       console.log('[Copy] navigator.clipboard.writeText 可用:', !!(navigator.clipboard && navigator.clipboard.writeText));
       
-      // 尝试使用 Clipboard API
+      // 在 iframe 中，Clipboard API 通常被权限策略阻止，直接使用 execCommand
+      if (isInIframe) {
+        console.log('[Copy] 检测到 iframe 环境，直接使用 execCommand（避免 Clipboard API 权限策略问题）');
+        execCommandFallback(text);
+        return;
+      }
+      
+      // 非 iframe 环境：优先尝试 Clipboard API
       if (navigator.clipboard && navigator.clipboard.writeText) {
         console.log('[Copy] 尝试使用 Clipboard API...');
         navigator.clipboard.writeText(text).then(() => {
