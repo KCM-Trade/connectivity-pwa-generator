@@ -36,6 +36,13 @@
       z-index: 0;
     }
 
+    /* 大屏幕时使用 cover 确保背景图足够大并覆盖整个区域 */
+    @media (min-width: 1200px) {
+      .bg-container {
+        background-size: cover;
+      }
+    }
+
     /* 主容器 */
     .main-container {
       position: relative;
