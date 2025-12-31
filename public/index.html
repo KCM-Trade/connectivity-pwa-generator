@@ -317,6 +317,19 @@
   </div>
 
   <script>
+    // 监听父窗口的复制响应（如果在 iframe 中）
+    if (window.self !== window.top) {
+      window.addEventListener('message', function(event) {
+        if (event.data && event.data.type === 'COPY_SUCCESS') {
+          console.log('[Copy] 收到父窗口复制成功消息');
+          showCopyToast();
+        } else if (event.data && event.data.type === 'COPY_FAILED') {
+          console.error('[Copy] 收到父窗口复制失败消息');
+          // 继续尝试本地方法
+        }
+      });
+    }
+
     // Token generation function
     document.getElementById('generate-token-btn').onclick = function() {
       const btn = this;
@@ -472,15 +485,78 @@
       }
     }
 
-    // execCommand fallback 函数
+    // execCommand fallback 函数 - 改进版本，在 iframe 中更可靠
     function execCommandFallback(text) {
       console.log('[Copy] execCommand fallback 开始执行');
+      
+      const isInIframe = window.self !== window.top;
+      
+      // 如果在 iframe 中，尝试通过 postMessage 让父窗口复制
+      if (isInIframe) {
+        console.log('[Copy] 尝试通过 postMessage 请求父窗口复制');
+        try {
+          window.parent.postMessage({
+            type: 'COPY_TO_CLIPBOARD',
+            text: text
+          }, '*');
+          
+          // 等待一小段时间看是否有响应
+          setTimeout(() => {
+            console.log('[Copy] postMessage 已发送，如果父窗口不支持，将尝试本地 execCommand');
+            tryLocalExecCommand(text);
+          }, 100);
+        } catch (err) {
+          console.error('[Copy] postMessage 失败:', err);
+          tryLocalExecCommand(text);
+        }
+      } else {
+        tryLocalExecCommand(text);
+      }
+    }
+
+    // 本地 execCommand 尝试
+    function tryLocalExecCommand(text) {
+      console.log('[Copy] 尝试本地 execCommand');
+      try {
+        // 方法1: 使用 contentEditable div（在某些情况下更可靠）
+        const div = document.createElement('div');
+        div.contentEditable = 'true';
+        div.style.position = 'fixed';
+        div.style.top = '0';
+        div.style.left = '0';
+        div.style.width = '1px';
+        div.style.height = '1px';
+        div.style.opacity = '0';
+        div.style.pointerEvents = 'none';
+        div.textContent = text;
+        document.body.appendChild(div);
+        
+        const range = document.createRange();
+        range.selectNodeContents(div);
+        const selection = window.getSelection();
+        selection.removeAllRanges();
+        selection.addRange(range);
+        
+        console.log('[Copy] 使用 contentEditable div 选中文本');
+        const successful1 = document.execCommand('copy');
+        console.log('[Copy] contentEditable execCommand 结果:', successful1);
+        
+        document.body.removeChild(div);
+        selection.removeAllRanges();
+        
+        if (successful1) {
+          console.log('[Copy] ✅ contentEditable 复制成功');
+          showCopyToast();
+          return;
+        }
+      } catch (err) {
+        console.error('[Copy] contentEditable 方法失败:', err);
+      }
+      
+      // 方法2: 使用 textarea（传统方法）
       try {
         const textArea = document.createElement('textarea');
         textArea.value = text;
-        console.log('[Copy] 创建 textarea 元素');
-        
-        // 设置样式使其不可见但可访问
         textArea.style.position = 'fixed';
         textArea.style.top = '0';
         textArea.style.left = '0';
@@ -495,13 +571,12 @@
         textArea.style.zIndex = '-9999';
         
         document.body.appendChild(textArea);
-        console.log('[Copy] textarea 已添加到 DOM');
+        console.log('[Copy] 创建 textarea 元素');
         
         textArea.focus();
         textArea.select();
         console.log('[Copy] textarea 已获得焦点并选中文本');
         
-        // 移动设备支持
         if (textArea.setSelectionRange) {
           textArea.setSelectionRange(0, text.length);
           console.log('[Copy] 设置选择范围:', '0-' + text.length);
@@ -518,7 +593,8 @@
           showCopyToast();
         } else {
           console.error('[Copy] ❌ execCommand 返回 false');
-          alert('無法自動複製，請手動複製以下內容：\n\n' + text);
+          // 最后的 fallback：显示可选择的文本让用户手动复制
+          showManualCopyDialog(text);
         }
       } catch (err) {
         console.error('[Copy] ❌ execCommand 执行异常:', err);
@@ -527,7 +603,7 @@
           message: err.message,
           stack: err.stack
         });
-        // 确保移除 textarea
+        // 清理残留元素
         const textAreas = document.querySelectorAll('textarea[style*="opacity: 0"]');
         textAreas.forEach(ta => {
           if (ta.parentNode) {
@@ -535,8 +611,29 @@
             console.log('[Copy] 清理残留的 textarea');
           }
         });
-        alert('無法自動複製，請手動複製以下內容：\n\n' + text);
+        showManualCopyDialog(text);
       }
+    }
+
+    // 显示手动复制对话框
+    function showManualCopyDialog(text) {
+      console.log('[Copy] 显示手动复制对话框');
+      const dialog = document.createElement('div');
+      dialog.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:white;padding:20px;border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,0.3);z-index:10000;max-width:90%;max-height:80vh;overflow:auto;';
+      dialog.innerHTML = `
+        <h3 style="margin-top:0;">無法自動複製</h3>
+        <p>請手動複製以下內容：</p>
+        <textarea readonly style="width:100%;min-height:100px;padding:10px;border:1px solid #ddd;border-radius:4px;font-family:monospace;font-size:12px;resize:vertical;">${text}</textarea>
+        <div style="margin-top:15px;text-align:right;">
+          <button onclick="this.closest('div').remove()" style="padding:8px 20px;background:#007bff;color:white;border:none;border-radius:4px;cursor:pointer;">關閉</button>
+        </div>
+      `;
+      document.body.appendChild(dialog);
+      
+      // 自动选中文本
+      const textarea = dialog.querySelector('textarea');
+      textarea.focus();
+      textarea.select();
     }
 
     // Show copy toast notification
