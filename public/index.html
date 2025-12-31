@@ -288,8 +288,6 @@
   <!-- 主容器 -->
   <div class="main-container">
     <div class="widget-card">
-      <!-- 关闭按钮 -->
-      <button class="close-btn" onclick="window.close()" title="關閉">&times;</button>
       
       <!-- Logo -->
       <div class="logo-container">
@@ -353,12 +351,13 @@
       let urlsHtml = '';
       if (pwaUrls && pwaUrls.length > 0) {
         urlsHtml = '<h6 class="mb-3" style="font-weight: 600; color: #1a1a2e;">PWA 链接：</h6>';
-        pwaUrls.forEach(pwaUrl => {
+        pwaUrls.forEach((pwaUrl, index) => {
           const fullUrl = pwaUrl.url + '?token=' + token;
+          // 使用 data 属性存储 URL，避免特殊字符问题
           urlsHtml += `
             <div class="url-item">
               <span class="url-text">${fullUrl}</span>
-              <button class="copy-btn" onclick="copyToClipboard('${fullUrl}')">
+              <button class="copy-btn" data-copy-url="${fullUrl.replace(/"/g, '&quot;')}" data-index="${index}">
                 <i class="bi bi-files"></i> 複製
               </button>
             </div>
@@ -377,7 +376,6 @@
                   <i class="bi bi-check-circle-fill text-success me-2"></i>
                   生成成功
                 </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
               </div>
               <div class="modal-body">
                 <div class="alert alert-success">
@@ -407,31 +405,90 @@
       // Add new modal to body
       document.body.insertAdjacentHTML('beforeend', modalHtml);
       
+      // 绑定复制按钮事件（使用事件委托，确保在 iframe 中也能工作）
+      const modalElement = document.getElementById('tokenModal');
+      modalElement.addEventListener('click', function(e) {
+        if (e.target.closest('.copy-btn')) {
+          const btn = e.target.closest('.copy-btn');
+          const urlToCopy = btn.getAttribute('data-copy-url');
+          if (urlToCopy) {
+            copyToClipboard(urlToCopy);
+          }
+        }
+      });
+      
       // Show modal
-      const tokenModal = new bootstrap.Modal(document.getElementById('tokenModal'));
+      const tokenModal = new bootstrap.Modal(modalElement);
       tokenModal.show();
 
       // Remove modal from DOM when hidden
-      document.getElementById('tokenModal').addEventListener('hidden.bs.modal', function() {
+      modalElement.addEventListener('hidden.bs.modal', function() {
         this.remove();
       });
     }
 
-    // Copy to clipboard function
+    // Copy to clipboard function - 优化 iframe 和非 iframe 支持
     function copyToClipboard(text) {
-      navigator.clipboard.writeText(text).then(() => {
-        showCopyToast();
-      }).catch(err => {
-        console.error('Failed to copy: ', err);
-        // Fallback for older browsers
-        const textArea = document.createElement('textarea');
-        textArea.value = text;
-        document.body.appendChild(textArea);
-        textArea.select();
-        document.execCommand('copy');
+      // 方法1: 优先尝试 Clipboard API（现代浏览器，包括 iframe）
+      if (navigator.clipboard && navigator.clipboard.writeText && window.isSecureContext) {
+        navigator.clipboard.writeText(text).then(() => {
+          showCopyToast();
+        }).catch(err => {
+          console.error('Clipboard API failed: ', err);
+          // 如果 Clipboard API 失败，使用 execCommand fallback
+          execCommandCopy(text);
+        });
+      } else {
+        // 方法2: 使用 execCommand（兼容性更好，在 iframe 中也更可靠）
+        execCommandCopy(text);
+      }
+    }
+
+    // 使用 execCommand 复制（在 iframe 中更可靠）
+    function execCommandCopy(text) {
+      const textArea = document.createElement('textarea');
+      textArea.value = text;
+      // 设置样式使其不可见但可访问
+      textArea.style.position = 'fixed';
+      textArea.style.top = '0';
+      textArea.style.left = '0';
+      textArea.style.width = '2em';
+      textArea.style.height = '2em';
+      textArea.style.padding = '0';
+      textArea.style.border = 'none';
+      textArea.style.outline = 'none';
+      textArea.style.boxShadow = 'none';
+      textArea.style.background = 'transparent';
+      textArea.style.opacity = '0';
+      textArea.style.zIndex = '-9999';
+      
+      document.body.appendChild(textArea);
+      
+      // 确保 textArea 获得焦点
+      textArea.focus();
+      textArea.select();
+      
+      // 移动设备支持
+      if (textArea.setSelectionRange) {
+        textArea.setSelectionRange(0, text.length);
+      }
+      
+      try {
+        const successful = document.execCommand('copy');
         document.body.removeChild(textArea);
-        showCopyToast();
-      });
+        
+        if (successful) {
+          showCopyToast();
+        } else {
+          // 如果 execCommand 返回 false，尝试提示用户
+          alert('無法自動複製，請手動複製以下內容：\n\n' + text);
+        }
+      } catch (err) {
+        console.error('execCommand failed: ', err);
+        document.body.removeChild(textArea);
+        // 最后的 fallback
+        alert('無法自動複製，請手動複製以下內容：\n\n' + text);
+      }
     }
 
     // Show copy toast notification
