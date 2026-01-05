@@ -57,11 +57,12 @@
     /* 卡片样式 */
     .widget-card {
       background: #ffffff;
-      border-radius: 8px;
+      border-radius: 10px;
+      border: 1px solid #e0e0e0;
       box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
-      padding: 40px 50px;
-      max-width: 480px;
-      width: 100%;
+      padding: 50px 36px;
+      width: 628px;
+      max-width: 100%;
       position: relative;
       text-align: center;
     }
@@ -88,7 +89,7 @@
 
     /* Logo */
     .logo-container {
-      margin-bottom: 30px;
+      margin-bottom: 42px;
     }
 
     .logo-container img {
@@ -102,10 +103,10 @@
       align-items: center;
       justify-content: center;
       gap: 8px;
-      font-size: 18px;
+      font-size: 24px;
       font-weight: 600;
-      color: #1a1a2e;
-      margin-bottom: 24px;
+      color: #1E2749;
+      margin-bottom: 35px;
     }
 
     .widget-title img {
@@ -115,28 +116,26 @@
 
     /* 生成按钮 */
     .generate-btn {
-      background: linear-gradient(135deg, #f7c948 0%, #e6b134 100%);
+      background: #F5C500;
       border: none;
       border-radius: 28px;
-      color: #1a1a2e;
+      color: #1E2749;
       font-size: 16px;
-      font-weight: 600;
+      font-weight: 400;
       padding: 14px 40px;
-      width: 100%;
-      max-width: 280px;
+      width: 427px;
+      max-width: 100%;
       cursor: pointer;
       transition: all 0.3s ease;
-      box-shadow: 0 4px 15px rgba(212, 168, 75, 0.3);
     }
 
     .generate-btn:hover {
-      background: linear-gradient(135deg, #e0b85c 0%, #d4a84b 100%);
-      transform: translateY(-2px);
-      box-shadow: 0 6px 20px rgba(212, 168, 75, 0.4);
+      background: #D8AD03;
+      font-weight: 500;
     }
 
     .generate-btn:active {
-      transform: translateY(0);
+      background: #D8AD03;
     }
 
     .generate-btn:disabled {
@@ -156,6 +155,7 @@
     /* Modal 样式覆盖 */
     .modal-backdrop {
       z-index: 1040 !important;
+      background-color: rgba(0, 0, 0, 0.5) !important;
     }
 
     .modal {
@@ -163,9 +163,11 @@
     }
 
     .modal-content {
-      border-radius: 16px;
-      border: none;
+      border-radius: 10px;
+      border: 1px solid #e0e0e0;
       box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+      width: 628px;
+      max-width: 100%;
     }
 
     .modal-header {
@@ -174,7 +176,7 @@
     }
 
     .modal-body {
-      padding: 24px;
+      padding: 50px 36px;
     }
 
     .modal-footer {
@@ -246,9 +248,15 @@
     /* 响应式调整 */
     @media (max-width: 576px) {
       .widget-card {
-        padding: 30px 24px;
-        border-radius: 12px;
+        width: 335px;
+        padding: 36px;
+        border-radius: 10px;
+        border: 1px solid #e0e0e0;
         margin: 10px;
+      }
+
+      .logo-container {
+        margin-bottom: 42px;
       }
 
       .logo-container img {
@@ -257,11 +265,14 @@
 
       .widget-title {
         font-size: 16px;
+        margin-bottom: 42px;
       }
 
       .generate-btn {
         font-size: 15px;
         padding: 12px 30px;
+        width: 100%;
+        max-width: 100%;
       }
 
       .close-btn {
@@ -321,10 +332,8 @@
     if (window.self !== window.top) {
       window.addEventListener('message', function(event) {
         if (event.data && event.data.type === 'COPY_SUCCESS') {
-          console.log('[Copy] 收到父窗口复制成功消息');
           showCopyToast();
         } else if (event.data && event.data.type === 'COPY_FAILED') {
-          console.error('[Copy] 收到父窗口复制失败消息');
           // 继续尝试本地方法
         }
       });
@@ -361,10 +370,6 @@
 
     // Show token modal with PWA URLs
     function showTokenModal(token, id, pwaUrls) {
-      console.log('[Modal] 开始显示 Token Modal');
-      console.log('[Modal] Token:', token);
-      console.log('[Modal] ID:', id);
-      console.log('[Modal] PWA URLs 数量:', pwaUrls ? pwaUrls.length : 0);
       let urlsHtml = '';
       if (pwaUrls && pwaUrls.length > 0) {
         urlsHtml = '<h6 class="mb-3" style="font-weight: 600; color: #1a1a2e;">PWA 链接：</h6>';
@@ -372,11 +377,10 @@
           const fullUrl = pwaUrl.url + '?token=' + token;
           // 转义单引号和双引号，以便在 onclick 中安全使用
           const escapedUrl = fullUrl.replace(/'/g, "\\'").replace(/"/g, '&quot;');
-          console.log('[Modal] 生成 URL 项:', { index, url: fullUrl, escapedUrl });
           urlsHtml += `
             <div class="url-item">
               <span class="url-text">${fullUrl}</span>
-              <button class="copy-btn" onclick="console.log('[Button] 复制按钮被点击'); copyToClipboard('${escapedUrl}')">
+              <button class="copy-btn" onclick="copyToClipboard('${escapedUrl}')">
                 <i class="bi bi-files"></i> 複製
               </button>
             </div>
@@ -418,28 +422,22 @@
       // Remove existing modal if any
       const existingModal = document.getElementById('tokenModal');
       if (existingModal) {
-        console.log('[Modal] 移除已存在的 modal');
         existingModal.remove();
       }
 
       // Add new modal to body
-      console.log('[Modal] 添加 modal HTML 到 DOM');
       document.body.insertAdjacentHTML('beforeend', modalHtml);
       
       // Show modal
       const modalElement = document.getElementById('tokenModal');
       if (!modalElement) {
-        console.error('[Modal] ❌ 找不到 modal 元素');
         return;
       }
-      console.log('[Modal] 创建 Bootstrap Modal 实例');
       const tokenModal = new bootstrap.Modal(modalElement);
-      console.log('[Modal] 显示 modal');
       tokenModal.show();
 
       // Remove modal from DOM when hidden
       modalElement.addEventListener('hidden.bs.modal', function() {
-        console.log('[Modal] Modal 已隐藏，从 DOM 移除');
         this.remove();
       });
     }
@@ -448,52 +446,31 @@
     function copyToClipboard(text) {
       const isInIframe = window.self !== window.top;
       
-      console.log('[Copy] 开始复制功能');
-      console.log('[Copy] 要复制的文本:', text);
-      console.log('[Copy] 是否在 iframe 中:', isInIframe);
-      console.log('[Copy] 是否安全上下文:', window.isSecureContext);
-      console.log('[Copy] navigator.clipboard 可用:', !!navigator.clipboard);
-      console.log('[Copy] navigator.clipboard.writeText 可用:', !!(navigator.clipboard && navigator.clipboard.writeText));
-      
       // 在 iframe 中，Clipboard API 通常被权限策略阻止，直接使用 execCommand
       if (isInIframe) {
-        console.log('[Copy] 检测到 iframe 环境，直接使用 execCommand（避免 Clipboard API 权限策略问题）');
         execCommandFallback(text);
         return;
       }
       
       // 非 iframe 环境：优先尝试 Clipboard API
       if (navigator.clipboard && navigator.clipboard.writeText) {
-        console.log('[Copy] 尝试使用 Clipboard API...');
         navigator.clipboard.writeText(text).then(() => {
-          console.log('[Copy] ✅ Clipboard API 复制成功');
           showCopyToast();
         }).catch(err => {
-          console.error('[Copy] ❌ Clipboard API 失败:', err);
-          console.log('[Copy] 错误详情:', {
-            name: err.name,
-            message: err.message,
-            stack: err.stack
-          });
-          console.log('[Copy] 尝试使用 execCommand fallback...');
           // Fallback for older browsers or iframe contexts
           execCommandFallback(text);
         });
       } else {
-        console.log('[Copy] Clipboard API 不可用，直接使用 execCommand fallback');
         execCommandFallback(text);
       }
     }
 
     // execCommand fallback 函数 - 改进版本，在 iframe 中更可靠
     function execCommandFallback(text) {
-      console.log('[Copy] execCommand fallback 开始执行');
-      
       const isInIframe = window.self !== window.top;
       
       // 如果在 iframe 中，尝试通过 postMessage 让父窗口复制
       if (isInIframe) {
-        console.log('[Copy] 尝试通过 postMessage 请求父窗口复制');
         try {
           window.parent.postMessage({
             type: 'COPY_TO_CLIPBOARD',
@@ -502,11 +479,9 @@
           
           // 等待一小段时间看是否有响应
           setTimeout(() => {
-            console.log('[Copy] postMessage 已发送，如果父窗口不支持，将尝试本地 execCommand');
             tryLocalExecCommand(text);
           }, 100);
         } catch (err) {
-          console.error('[Copy] postMessage 失败:', err);
           tryLocalExecCommand(text);
         }
       } else {
@@ -516,7 +491,6 @@
 
     // 本地 execCommand 尝试
     function tryLocalExecCommand(text) {
-      console.log('[Copy] 尝试本地 execCommand');
       try {
         // 方法1: 使用 contentEditable div（在某些情况下更可靠）
         const div = document.createElement('div');
@@ -537,20 +511,17 @@
         selection.removeAllRanges();
         selection.addRange(range);
         
-        console.log('[Copy] 使用 contentEditable div 选中文本');
         const successful1 = document.execCommand('copy');
-        console.log('[Copy] contentEditable execCommand 结果:', successful1);
         
         document.body.removeChild(div);
         selection.removeAllRanges();
         
         if (successful1) {
-          console.log('[Copy] ✅ contentEditable 复制成功');
           showCopyToast();
           return;
         }
       } catch (err) {
-        console.error('[Copy] contentEditable 方法失败:', err);
+        // 继续尝试 textarea 方法
       }
       
       // 方法2: 使用 textarea（传统方法）
@@ -571,44 +542,30 @@
         textArea.style.zIndex = '-9999';
         
         document.body.appendChild(textArea);
-        console.log('[Copy] 创建 textarea 元素');
         
         textArea.focus();
         textArea.select();
-        console.log('[Copy] textarea 已获得焦点并选中文本');
         
         if (textArea.setSelectionRange) {
           textArea.setSelectionRange(0, text.length);
-          console.log('[Copy] 设置选择范围:', '0-' + text.length);
         }
         
         const successful = document.execCommand('copy');
-        console.log('[Copy] execCommand("copy") 执行结果:', successful);
         
         document.body.removeChild(textArea);
-        console.log('[Copy] textarea 已从 DOM 移除');
         
         if (successful) {
-          console.log('[Copy] ✅ execCommand 复制成功');
           showCopyToast();
         } else {
-          console.error('[Copy] ❌ execCommand 返回 false');
           // 最后的 fallback：显示可选择的文本让用户手动复制
           showManualCopyDialog(text);
         }
       } catch (err) {
-        console.error('[Copy] ❌ execCommand 执行异常:', err);
-        console.error('[Copy] 异常详情:', {
-          name: err.name,
-          message: err.message,
-          stack: err.stack
-        });
         // 清理残留元素
         const textAreas = document.querySelectorAll('textarea[style*="opacity: 0"]');
         textAreas.forEach(ta => {
           if (ta.parentNode) {
             ta.parentNode.removeChild(ta);
-            console.log('[Copy] 清理残留的 textarea');
           }
         });
         showManualCopyDialog(text);
@@ -617,7 +574,6 @@
 
     // 显示手动复制对话框
     function showManualCopyDialog(text) {
-      console.log('[Copy] 显示手动复制对话框');
       const dialog = document.createElement('div');
       dialog.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:white;padding:20px;border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,0.3);z-index:10000;max-width:90%;max-height:80vh;overflow:auto;';
       dialog.innerHTML = `
@@ -638,17 +594,12 @@
 
     // Show copy toast notification
     function showCopyToast() {
-      console.log('[Toast] 显示复制成功提示');
       const toast = document.getElementById('copy-toast');
       if (toast) {
         toast.style.display = 'block';
-        console.log('[Toast] Toast 已显示');
         setTimeout(() => { 
           toast.style.display = 'none';
-          console.log('[Toast] Toast 已隐藏');
         }, 2000);
-      } else {
-        console.error('[Toast] ❌ 找不到 toast 元素');
       }
     }
   </script>
