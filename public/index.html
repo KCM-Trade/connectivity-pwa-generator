@@ -63,8 +63,10 @@
       z-index: 2;
       min-height: 100vh;
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
+      gap: 18px;
       padding: 20px;
     }
 
@@ -79,6 +81,99 @@
       max-width: 100%;
       position: relative;
       text-align: center;
+    }
+
+    .status-card {
+      text-align: left;
+      padding: 24px;
+    }
+
+    .status-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .status-title {
+      margin: 0;
+      font-size: 20px;
+      font-weight: 600;
+      color: #1E2749;
+    }
+
+    .refresh-status-btn {
+      border: 1px solid #dcdcdc;
+      background: #ffffff;
+      border-radius: 999px;
+      color: #1E2749;
+      font-size: 14px;
+      padding: 8px 14px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+    }
+
+    .refresh-status-btn:hover {
+      background: #f4f5f7;
+    }
+
+    .refresh-status-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .status-url {
+      font-size: 13px;
+      color: #333;
+      word-break: break-all;
+      min-height: 20px;
+    }
+
+    .status-table .status-col-type,
+    .status-table .status-col-status,
+    .status-table .status-col-action,
+    .status-table .status-cell {
+      white-space: nowrap;
+    }
+
+    .status-table .status-col-type {
+      width: 90px;
+    }
+
+    .status-table .status-col-status {
+      width: 110px;
+    }
+
+    .status-table .status-col-action {
+      width: 110px;
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 4px 10px;
+      white-space: nowrap;
+      line-height: 1.2;
+    }
+
+    .status-pill--checking {
+      color: #6c757d;
+      background: #f1f3f5;
+    }
+
+    .status-pill--available {
+      color: #155724;
+      background: #d4edda;
+    }
+
+    .status-pill--unavailable {
+      color: #842029;
+      background: #f8d7da;
     }
 
     /* 关闭按钮 */
@@ -299,6 +394,14 @@
         top: 12px;
         right: 12px;
       }
+
+      .status-card {
+        padding: 16px;
+      }
+
+      .status-title {
+        font-size: 16px;
+      }
     }
 
     @media (max-width: 400px) {
@@ -308,6 +411,11 @@
 
       .generate-btn {
         max-width: 100%;
+      }
+
+      .status-header {
+        align-items: flex-start;
+        flex-direction: column;
       }
     }
   </style>
@@ -339,18 +447,170 @@
         生成APP安装链接
       </button>
     </div>
+
+    <div class="widget-card status-card">
+      <div class="status-header">
+        <h2 class="status-title">连接状态</h2>
+        <button id="refresh-root-btn" class="refresh-status-btn" type="button">
+          刷新
+        </button>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0 status-table">
+          <thead>
+            <tr>
+              <th scope="col" class="status-col-type">类型</th>
+              <th scope="col">链接</th>
+              <th scope="col" class="status-col-status">状态</th>
+              <th scope="col" class="status-col-action">操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr data-type="aof">
+              <td>开户表</td>
+              <td class="status-url" id="status-url-aof">-</td>
+              <td id="status-text-aof" class="status-cell">
+                <span class="status-pill status-pill--checking">检测中…</span>
+              </td>
+              <td>
+                <button class="copy-btn" type="button" onclick="copyStatusUrl('aof')">
+                  <i class="bi bi-files"></i> 复制
+                </button>
+              </td>
+            </tr>
+            <tr data-type="ows">
+              <td>官网</td>
+              <td class="status-url" id="status-url-ows">-</td>
+              <td id="status-text-ows" class="status-cell">
+                <span class="status-pill status-pill--checking">检测中…</span>
+              </td>
+              <td>
+                <button class="copy-btn" type="button" onclick="copyStatusUrl('ows')">
+                  <i class="bi bi-files"></i> 复制
+                </button>
+              </td>
+            </tr>
+            <tr data-type="web_app">
+              <td>会员中心</td>
+              <td class="status-url" id="status-url-web_app">-</td>
+              <td id="status-text-web_app" class="status-cell">
+                <span class="status-pill status-pill--checking">检测中…</span>
+              </td>
+              <td>
+                <button class="copy-btn" type="button" onclick="copyStatusUrl('web_app')">
+                  <i class="bi bi-files"></i> 复制
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
   </div>
 
   <!-- Toast 通知 -->
   <div id="copy-toast" class="toast-container" style="display:none;">
     <div class="toast align-items-center text-bg-success border-0 show" role="alert">
       <div class="d-flex">
-        <div class="toast-body">已複製到剪貼簿</div>
+        <div class="toast-body">已复制到剪贴板</div>
       </div>
     </div>
   </div>
 
+  <script src="js/main.js"></script>
   <script>
+    const API_HOST = 'https://chc.bbbb.top/';
+    const LINK_TYPES = ['aof', 'ows', 'web_app'];
+    const currentStatusUrls = {
+      aof: '',
+      ows: '',
+      web_app: ''
+    };
+
+    function setStatus(type, variant, text) {
+      const cell = document.getElementById(`status-text-${type}`);
+      if (!cell) return;
+      cell.innerHTML = `<span class="status-pill status-pill--${variant}">${text}</span>`;
+    }
+
+    function setStatusUrl(type, urlText) {
+      const cell = document.getElementById(`status-url-${type}`);
+      if (!cell) return;
+      if (!urlText || urlText === '-') {
+        cell.textContent = '-';
+        return;
+      }
+
+      if (urlText === '无法取得根域名') {
+        cell.textContent = urlText;
+        return;
+      }
+
+      const safeUrl = String(urlText).replace(/"/g, '&quot;');
+      cell.innerHTML = `<a href="${safeUrl}" target="_blank" rel="noopener noreferrer">${urlText}</a>`;
+    }
+
+    function copyStatusUrl(type) {
+      const targetUrl = currentStatusUrls[type];
+      if (!targetUrl) {
+        return;
+      }
+      copyToClipboard(targetUrl);
+    }
+
+    async function checkTypeAvailability(type) {
+      try {
+        await load(API_HOST, type);
+        setStatus(type, 'available', '可用');
+      } catch (error) {
+        setStatus(type, 'unavailable', '不可用');
+      }
+    }
+
+    async function refreshLinkStatus() {
+      const refreshButton = document.getElementById('refresh-root-btn');
+      if (refreshButton) {
+        refreshButton.disabled = true;
+      }
+
+      LINK_TYPES.forEach((type) => {
+        setStatus(type, 'checking', '检测中…');
+        setStatusUrl(type, '-');
+        currentStatusUrls[type] = '';
+      });
+
+      try {
+        const rootDomain = await getRouter(API_HOST);
+        LINK_TYPES.forEach((type) => {
+          const fullUrl = `${rootDomain}?type=${type}`;
+          currentStatusUrls[type] = fullUrl;
+          setStatusUrl(type, fullUrl);
+        });
+      } catch (error) {
+        LINK_TYPES.forEach((type) => {
+          setStatus(type, 'unavailable', '不可用');
+          setStatusUrl(type, '無法取得根域名');
+        });
+        if (refreshButton) {
+          refreshButton.disabled = false;
+        }
+        return;
+      }
+
+      await Promise.all(LINK_TYPES.map((type) => checkTypeAvailability(type)));
+      if (refreshButton) {
+        refreshButton.disabled = false;
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const refreshButton = document.getElementById('refresh-root-btn');
+      if (refreshButton) {
+        refreshButton.addEventListener('click', refreshLinkStatus);
+      }
+      refreshLinkStatus();
+    });
+
     // 监听父窗口的复制响应（如果在 iframe 中）
     if (window.self !== window.top) {
       window.addEventListener('message', function(event) {
@@ -379,11 +639,11 @@
         if (data.success) {
           showTokenModal(data.token, data.id, data.pwaUrls);
         } else {
-          alert('Token 生成失敗：' + (data.error || '未知錯誤'));
+          alert('Token 生成失败：' + (data.error || '未知错误'));
         }
       })
       .catch(err => {
-        alert('Token 生成失敗：' + err.message);
+        alert('Token 生成失败：' + err.message);
       })
       .finally(() => {
         btn.disabled = false;
@@ -404,13 +664,13 @@
             <div class="url-item">
               <span class="url-text">${fullUrl}</span>
               <button class="copy-btn" onclick="copyToClipboard('${escapedUrl}')">
-                <i class="bi bi-files"></i> 複製
+                <i class="bi bi-files"></i> 复制
               </button>
             </div>
           `;
         });
       } else {
-        urlsHtml = '<p class="text-muted">沒有找到 PWA URLs</p>';
+        urlsHtml = '<p class="text-muted">没有找到 PWA URLs</p>';
       }
 
       const modalHtml = `
@@ -426,7 +686,7 @@
               <div class="modal-body">
                 <div class="alert alert-success">
                   <strong>Token:</strong> ${token}<br>
-                  <strong>資料庫 ID:</strong> ${id}
+                  <strong>数据库 ID:</strong> ${id}
                 </div>
                 <div class="warning-box">
                   <i class="bi bi-exclamation-triangle-fill"></i>
@@ -435,7 +695,7 @@
                 ${urlsHtml}
               </div>
               <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">關閉</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
               </div>
             </div>
           </div>
@@ -600,11 +860,11 @@
       const dialog = document.createElement('div');
       dialog.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:white;padding:20px;border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,0.3);z-index:10000;max-width:90%;max-height:80vh;overflow:auto;';
       dialog.innerHTML = `
-        <h3 style="margin-top:0;">無法自動複製</h3>
-        <p>請手動複製以下內容：</p>
+        <h3 style="margin-top:0;">无法自动复制</h3>
+        <p>请手动复制以下内容：</p>
         <textarea readonly style="width:100%;min-height:100px;padding:10px;border:1px solid #ddd;border-radius:4px;font-family:monospace;font-size:12px;resize:vertical;">${text}</textarea>
         <div style="margin-top:15px;text-align:right;">
-          <button onclick="this.closest('div').remove()" style="padding:8px 20px;background:#007bff;color:white;border:none;border-radius:4px;cursor:pointer;">關閉</button>
+          <button onclick="this.closest('div').remove()" style="padding:8px 20px;background:#007bff;color:white;border:none;border-radius:4px;cursor:pointer;">关闭</button>
         </div>
       `;
       document.body.appendChild(dialog);
