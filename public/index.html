@@ -96,11 +96,23 @@
       margin-bottom: 16px;
     }
 
+    .status-header-info {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
     .status-title {
       margin: 0;
       font-size: 20px;
       font-weight: 600;
       color: #1E2749;
+    }
+
+    .status-network {
+      margin: 0;
+      font-size: 13px;
+      color: #6c757d;
     }
 
     .refresh-status-btn {
@@ -172,6 +184,97 @@
     }
 
     .status-pill--unavailable {
+      color: #842029;
+      background: #f8d7da;
+    }
+
+    .report-form {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .report-form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .report-form-label {
+      font-size: 13px;
+      font-weight: 600;
+      color: #1E2749;
+      margin: 0;
+    }
+
+    .report-form-label .optional {
+      font-weight: 400;
+      color: #6c757d;
+    }
+
+    .report-form-input,
+    .report-form-textarea {
+      border: 1px solid #dcdcdc;
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 14px;
+      color: #333;
+      background: #fff;
+      transition: border-color 0.2s ease;
+      width: 100%;
+    }
+
+    .report-form-input:focus,
+    .report-form-textarea:focus {
+      outline: none;
+      border-color: #F5C500;
+    }
+
+    .report-form-textarea {
+      min-height: 80px;
+      resize: vertical;
+    }
+
+    .report-submit-btn {
+      background: #1a2036;
+      border: none;
+      border-radius: 28px;
+      color: #ffffff;
+      font-size: 15px;
+      font-weight: 500;
+      padding: 12px 24px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      margin-top: 4px;
+      align-self: flex-start;
+    }
+
+    .report-submit-btn:hover {
+      background: linear-gradient(135deg, #e0b85c 0%, #d4a84b 100%);
+      color: #1a1a2e;
+    }
+
+    .report-submit-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .report-feedback {
+      font-size: 13px;
+      margin: 0;
+      padding: 10px 12px;
+      border-radius: 8px;
+      display: none;
+    }
+
+    .report-feedback--success {
+      display: block;
+      color: #155724;
+      background: #d4edda;
+    }
+
+    .report-feedback--error {
+      display: block;
       color: #842029;
       background: #f8d7da;
     }
@@ -450,7 +553,10 @@
 
     <div class="widget-card status-card">
       <div class="status-header">
-        <h2 class="status-title">连接状态</h2>
+        <div class="status-header-info">
+          <h2 class="status-title">连接状态</h2>
+          <p class="status-network" id="status-network">网络：-</p>
+        </div>
         <button id="refresh-root-btn" class="refresh-status-btn" type="button">
           刷新
         </button>
@@ -506,6 +612,35 @@
         </table>
       </div>
     </div>
+
+    <div class="widget-card status-card">
+      <div class="status-header">
+        <div class="status-header-info">
+          <h2 class="status-title">反馈链接问题</h2>
+          <p class="status-network">如链接无法访问，请填写以下信息提交反馈</p>
+        </div>
+      </div>
+      <form id="url-report-form" class="report-form">
+        <div class="report-form-group">
+          <label class="report-form-label" for="report-url">链接 URL</label>
+          <input class="report-form-input" type="url" id="report-url" name="url" required placeholder="https://">
+        </div>
+        <div class="report-form-group">
+          <label class="report-form-label" for="report-details">问题描述 <span class="optional">（选填）</span></label>
+          <textarea class="report-form-textarea" id="report-details" name="details" maxlength="1000" placeholder="请描述遇到的问题，例如无法打开、加载缓慢等"></textarea>
+        </div>
+        <div class="report-form-group">
+          <label class="report-form-label" for="report-location">位置 <span class="optional">（选填）</span></label>
+          <input class="report-form-input" type="text" id="report-location" name="location" placeholder="例如：中国大陆、香港">
+        </div>
+        <div class="report-form-group">
+          <label class="report-form-label" for="report-client-id">CRM ID <span class="optional">（选填）</span></label>
+          <input class="report-form-input" type="text" id="report-client-id" name="client_id" placeholder="客户 CRM 编号">
+        </div>
+        <p id="report-feedback" class="report-feedback" role="status" aria-live="polite"></p>
+        <button type="submit" id="report-submit-btn" class="report-submit-btn">提交反馈</button>
+      </form>
+    </div>
   </div>
 
   <!-- Toast 通知 -->
@@ -531,6 +666,12 @@
       const cell = document.getElementById(`status-text-${type}`);
       if (!cell) return;
       cell.innerHTML = `<span class="status-pill status-pill--${variant}">${text}</span>`;
+    }
+
+    function setNetwork(network) {
+      const el = document.getElementById('status-network');
+      if (!el) return;
+      el.textContent = network ? `网络：${network}` : '网络：-';
     }
 
     function setStatusUrl(type, urlText) {
@@ -573,6 +714,7 @@
         refreshButton.disabled = true;
       }
 
+      setNetwork('');
       LINK_TYPES.forEach((type) => {
         setStatus(type, 'checking', '检测中…');
         setStatusUrl(type, '-');
@@ -581,15 +723,17 @@
 
       try {
         const rootDomain = await getRouter(API_HOST);
+        setNetwork(rootDomain.network);
         LINK_TYPES.forEach((type) => {
-          const fullUrl = `${rootDomain}?type=${type}`;
+          const fullUrl = `${rootDomain.url}?type=${type}`;
           currentStatusUrls[type] = fullUrl;
           setStatusUrl(type, fullUrl);
         });
       } catch (error) {
+        setNetwork('');
         LINK_TYPES.forEach((type) => {
           setStatus(type, 'unavailable', '不可用');
-          setStatusUrl(type, '無法取得根域名');
+          setStatusUrl(type, '无法取得根域名');
         });
         if (refreshButton) {
           refreshButton.disabled = false;
@@ -603,12 +747,90 @@
       }
     }
 
+    function showReportFeedback(message, variant) {
+      const feedback = document.getElementById('report-feedback');
+      if (!feedback) return;
+      feedback.textContent = message;
+      feedback.className = `report-feedback report-feedback--${variant}`;
+    }
+
+    function clearReportFeedback() {
+      const feedback = document.getElementById('report-feedback');
+      if (!feedback) return;
+      feedback.textContent = '';
+      feedback.className = 'report-feedback';
+    }
+
+    async function submitUrlReport(event) {
+      event.preventDefault();
+      clearReportFeedback();
+
+      const form = event.currentTarget;
+      const submitButton = document.getElementById('report-submit-btn');
+      const url = document.getElementById('report-url').value.trim();
+      const details = document.getElementById('report-details').value.trim();
+      const location = document.getElementById('report-location').value.trim();
+      const clientId = document.getElementById('report-client-id').value.trim();
+
+      if (!url) {
+        showReportFeedback('请填写链接 URL', 'error');
+        return;
+      }
+
+      const payload = {
+        url,
+        status: 'issue',
+        fail_reason: details || 'user report',
+        fail_location: location || '',
+        client_id: clientId || '',
+        url_id: '2222'
+      };
+
+      if (submitButton) {
+        submitButton.disabled = true;
+        submitButton.textContent = '提交中…';
+      }
+
+      try {
+        const response = await fetch(`${API_HOST}api/urlCheckLogs`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if (!response.ok) {
+          let message = '提交失败';
+          try {
+            const data = await response.json();
+            message = data.error || data.message || message;
+          } catch (_) {
+            // ignore non-JSON error bodies
+          }
+          throw new Error(message);
+        }
+
+        showReportFeedback('反馈已提交，感谢您的回报', 'success');
+        form.reset();
+      } catch (error) {
+        showReportFeedback('提交失败：' + error.message, 'error');
+      } finally {
+        if (submitButton) {
+          submitButton.disabled = false;
+          submitButton.textContent = '提交反馈';
+        }
+      }
+    }
+
     document.addEventListener('DOMContentLoaded', () => {
       const refreshButton = document.getElementById('refresh-root-btn');
       if (refreshButton) {
         refreshButton.addEventListener('click', refreshLinkStatus);
       }
       refreshLinkStatus();
+
+      const reportForm = document.getElementById('url-report-form');
+      if (reportForm) {
+        reportForm.addEventListener('submit', submitUrlReport);
+      }
     });
 
     // 监听父窗口的复制响应（如果在 iframe 中）

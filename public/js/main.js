@@ -75,7 +75,6 @@ async function decryptInBrowser(encryptedData, password, salt) {
     const result = await fetch(`${domain}/api/getEncodedUrls?type=router`);
     const data = await result.json();
     const url = await decryptInBrowser(data.data, 'ykcm-fallback-password', 'salt-kcming');
-    console.log(url);
     const links = JSON.parse(url);
-    return links[Math.floor(Math.random() * links.length)].url;
+    return links[Math.floor(Math.random() * links.length)];
   }
